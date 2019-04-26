@@ -30,6 +30,7 @@ public class tranServer extends Thread {
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             transform trans = (transform)ois.readObject();
             trans.BtoI();
+            Thread.sleep(5000);
     		Send send = new Send(socket,sock);
     		send.start();
 
@@ -49,9 +50,9 @@ public class tranServer extends Thread {
             // TODO Auto-generated catch block
             e.printStackTrace();
 			
-        } /*catch (InterruptedException e) {
+        } catch (InterruptedException e) {
 			e.printStackTrace();
-		}*/
+		}
 		
 	   }
 //	}
