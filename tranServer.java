@@ -96,7 +96,7 @@ class Send extends Thread
 				
 				fileContent = Files.readAllBytes(files[i].toPath());				
 				imgByte.add(fileContent);
-				text.add(files[i].getAbsolutePath());
+				text.add(files[i].getName());
 			}
 			
 			imgList an = new imgList(imgByte, text);
