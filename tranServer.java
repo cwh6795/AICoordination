@@ -148,7 +148,7 @@ class Receive extends Thread
 		br = new BufferedReader(isr);
 		String data = br.readLine();
 		File file = new File("./img/rating.txt");
-		writer = new FileWriter(file, true);
+		writer = new FileWriter(file);
 		writer.write(data);
 		writer.flush();
 		writer.close();
