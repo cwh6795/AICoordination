@@ -24,12 +24,15 @@ public class transform implements Serializable {
 	{
 		try 
 		{
-			BufferedImage img = ImageIO.read(new ByteArrayInputStream(b));
-			Graphics2D grp = img.createGraphics();
-			grp.rotate(90);
-			System.out.println(img);
-			ImageIO.write(img,"jpg",new File("./img/"+s+".jpg"));
-//			img.flush();
+			BufferedImage oldImage = ImageIO.read(new ByteArrayInputStream(b));
+			BufferedImage newImage = new BufferedImage(oldImage.getHeight(), oldImage.getWidth(), oldImage.getType());
+			Graphics2D graphics = (Graphics2D) newImage.getGraphics();
+			graphics.rotate(Math.toRadians(90), newImage.getWidth() / 2, newImage.getHeight() / 2);
+			graphics.translate((newImage.getWidth() - oldImage.getWidth()) / 2, (newImage.getHeight() - oldImage.getHeight()) / 2);
+			graphics.drawImage(oldImage, 0, 0, oldImage.getWidth(), oldImage.getHeight(), null);
+			
+			System.out.println(newImage);
+			ImageIO.write(newImage,"jpg",new File("./img/"+s+".jpg"));
 			File file = new File("./img/img1.txt");
 			FileWriter fileWrite = new FileWriter(file, true);
 			fileWrite.write(s);
