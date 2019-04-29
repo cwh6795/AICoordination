@@ -33,7 +33,8 @@ public class tranServer extends Thread {
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             transform trans = (transform)ois.readObject();
             trans.BtoI();
-            Thread.sleep(5000);
+			System.out.println("waiting 6 seconds");
+            Thread.sleep(6000);
     		Send send = new Send(socket,sock);
     		send.start();
 
