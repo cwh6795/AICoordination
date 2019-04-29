@@ -14,6 +14,7 @@ import java.io.*;
 
 public class tranServer extends Thread {
 	public static ServerSocket sock;
+	public static int count = 0;
 	public tranServer(ServerSocket s)
 	{
 		sock = s;
@@ -22,11 +23,13 @@ public class tranServer extends Thread {
     @Override
 	public void run() {
 		// TODO Auto-generated method stub
-//       while(true){
+      while(true){
         try {
-
+			System.out.println("waiting client");
             Socket socket = sock.accept();
-			System.out.println("socket accepted");
+			count++;
+			System.out.println("socket accepted, number of counts = "+count);
+			
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             transform trans = (transform)ois.readObject();
             trans.BtoI();
@@ -55,7 +58,7 @@ public class tranServer extends Thread {
 		}
 		
 	   }
-//	}
+	}
 
 	public static void main(String[] args) throws IOException {
 	       	// TODO Auto-generated method stub
@@ -153,7 +156,7 @@ class Receive extends Thread
 		writer.flush();
 		writer.close();
 
-		serverSock.close();
+//		serverSock.close();
 		}catch(IOException e)
 		{
 			e.printStackTrace();
