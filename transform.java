@@ -32,12 +32,12 @@ public class transform implements Serializable {
 			graphics.drawImage(oldImage, 0, 0, oldImage.getWidth(), oldImage.getHeight(), null);
 			
 			System.out.println(newImage);
-			ImageIO.write(newImage,"jpg",new File("./img/"+s+".jpg"));
-			File file = new File("./img/img1.txt");
-			FileWriter fileWrite = new FileWriter(file, true);
-			fileWrite.write(s);
-			fileWrite.flush();
-			fileWrite.close();
+			ImageIO.write(newImage,"jpg",new File("/home/root/coordi/testing/"+s+".jpg"));
+			//File file = new File("/home/root/coordi/testing/img1.txt");
+			//FileWriter fileWrite = new FileWriter(file, true);
+			//fileWrite.write(s);
+			//fileWrite.flush();
+			//fileWrite.close();
 			
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
