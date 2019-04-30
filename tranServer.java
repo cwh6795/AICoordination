@@ -8,7 +8,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Files;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.io.*;
 
@@ -88,11 +88,12 @@ class Send extends Thread
 	public void run() {
 	// TODO Auto-generated method stub
 		System.out.println("sending started");
-        File[] files = new File("./img_out").listFiles();
+        File[] files = new File("/home/root/coordi/recommend").listFiles();
         byte[] fileContent;
         ArrayList<byte[]> imgByte = new ArrayList<>();
         ArrayList<String> text = new ArrayList<>();
         int fileLen = files.length;
+	Path path = Paths.get("/home/root/coordi/after_recommend");
         try 
         {
 			for(int i=0; i<fileLen ; i++)
@@ -101,6 +102,7 @@ class Send extends Thread
 				fileContent = Files.readAllBytes(files[i].toPath());				
 				imgByte.add(fileContent);
 				text.add(files[i].getName());
+				Files.move(files[i].toPath(), path.resolve(files[i].getName()), StandardCopyOption.REPLACE_EXISTING);
 			}
 			
 			imgList an = new imgList(imgByte, text);
@@ -151,7 +153,7 @@ class Receive extends Thread
 		isr = new InputStreamReader(is);
 		br = new BufferedReader(isr);
 		String data = br.readLine();
-		File file = new File("./img/rating.txt");
+		File file = new File("/home/root/coordi/rating/rating.txt");
 		writer = new FileWriter(file);
 		writer.write(data);
 		writer.flush();
