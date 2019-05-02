@@ -117,6 +117,21 @@ def get_rand_list(matrix, top_k):
 	return max_list, index_list
 
 
+def predictStyle(img_name, model_style):
+	print('-----------------------------------------------------------------------------------------------------------')
+	print('img_name : ', img_name)
+	XX = np.zeros((1, 200, 200, 3), dtype=K.floatx())
+	KK = image.load_img(img_name, grayscale=False, target_size=(200, 200))
+	KK = image.img_to_array(KK)
+	XX[0] = KK
+	style_ = model_style.predict(XX, batch_size=None, verbose=0, steps=None)
+
+	style_index = np.argmax(style_[0])
+	print('-----------------------------------------------------------------------------------------------------------')
+
+	return STYLE[style_index]
+
+
 texture_json = open('./models/texture/model_texture19.json', 'r')
 style_json = open('./models/style/model_style7.json', 'r')
 top_bot_full_json = open('./models/top_bot_full/top_bot_full.json', 'r')
@@ -234,7 +249,7 @@ while True:
 				axis_type = women_type_file[fou, :]
 				axis_texture = women_texture_file[two, :]
 				axis_type = np.reshape(axis_type, (1, len(TYPE_TOP)))
-				axis_texture = np.reshape(axis_texture, (1, len(TEXUTRE)))
+				axis_texture = np.reshape(axis_texture, (1, len(TEXTURE)))
 			else:
 				axis_type = women_type_file[:, fou]
 				axis_texture = women_texture_file[:, two]
@@ -270,10 +285,10 @@ while True:
 			for index in index_list:
 				rec_list_val.append((TYPE_TOP[index[0]], TEXTURE[index[1]]))
 		elif clo == 1:
-			if sex == 'men':
+			if sex[0] == 'men':
 				for index in index_list:
 					rec_list_val.append((TYPE_BOT_MEN[index[0]], TEXTURE[index[1]]))
-			elif sex == 'women':
+			elif sex[0] == 'women':
 				for index in index_list:
 					rec_list_val.append((TYPE_BOT_WOMEN[index[0]], TEXTURE[index[1]]))
 			else:
@@ -284,10 +299,10 @@ while True:
 			for index in rand_index:
 				rec_list_rand.append((TYPE_TOP[index[0]], TEXTURE[index[1]]))
 		elif clo == 1:
-			if sex == 'men':
+			if sex[0] == 'men':
 				for index in index_list:
 					rec_list_rand.append((TYPE_BOT_MEN[index[0]], TEXTURE[index[1]]))
-			elif sex == 'women':
+			elif sex[0] == 'women':
 				for index in index_list:
 					rec_list_rand.append((TYPE_BOT_WOMEN[index[0]], TEXTURE[index[1]]))
 			else:
@@ -309,6 +324,35 @@ while True:
 			path = os.path.join(os.path.join(os.path.join(img_res_path, sex[0]), rec[0]), rec[1])
 			tmp_img_list = os.listdir(path)
 			for i, k in enumerate(tmp_img_list):
+				tmp_string = os.path.join(path, k)
+				if style[0] == 'none':
+					tmp_img_list[i] = (tmp_string, 'none')
+				elif style[0] in STYLE:
+					tmp_style = predictStyle(tmp_string, model_style)
+					tmp_img_list[i] = (tmp_string, tmp_style)
+			rec_img_array.append(tmp_img_list)
+
+		print('rec_img_array : ', rec_img_array)
+		for img_array in rec_img_array:
+			if len(img_array) != 0:
+				if style[0] == 'none':
+					A = random.randrange(0, len(img_array))
+					fin_img_list.append(img_array[A][0])
+				elif style[0] in STYLE:
+					for X in range(len(img_array)):
+						if img_array[X][1] == style[0]:
+							fin_img_list.append(img_array[X][0])
+
+		print('fin_img_list : ', fin_img_list)
+		for fin_img in fin_img_list:
+			shutil.copy2(fin_img, './recommend/' + fin_img.split('/')[3] + '_' + fin_img.split('/')[4] + '_' + style[0] + '.jpg')
+		'''
+		rec_img_array = []
+		fin_img_list = []
+		for rec in rec_list_val:
+			path = os.path.join(os.path.join(os.path.join(img_res_path, sex[0]), rec[0]), rec[1])
+			tmp_img_list = os.listdir(path)
+			for i, k in enumerate(tmp_img_list):
 				tmp_img_list[i] = os.path.join(path, k)
 			rec_img_array.append(tmp_img_list)
 
@@ -321,6 +365,7 @@ while True:
 		print('fin_img_list : ', fin_img_list)
 		for fin_img in fin_img_list:
 			shutil.copy2(fin_img, './final/' + fin_img.split('/')[3] + '_' + fin_img.split('/')[4] + '.jpg')
+		'''
 
 	shutil.move(os.path.join(src_path, file_list[0]), os.path.join(dest_path, file_list[0]))
 	time.sleep(1)
