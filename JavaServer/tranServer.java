@@ -2,10 +2,6 @@ package com.example.android.Application;
 
 
 
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.*;
@@ -14,6 +10,7 @@ import java.io.*;
 
 public class tranServer extends Thread {
 	public static ServerSocket sock;
+	public static Socket client;
 	public static int count = 0;
 	public tranServer(ServerSocket s)
 	{
@@ -28,20 +25,27 @@ public class tranServer extends Thread {
 			System.out.println("waiting client");
             Socket socket = sock.accept();
 			count++;
-			System.out.println("socket accepted, number of counts = "+count);
-			
+			System.out.println("socket accepted, number of counts = "+count);			
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             transform trans = (transform)ois.readObject();
             trans.BtoI();
-			System.out.println("waiting 6 seconds");
-            Thread.sleep(6000);
+            
+            client = new Socket("localhost",8008);
+            PrintWriter out = new PrintWriter(client.getOutputStream(), true);
+            out.print("image stored\n");
+            out.flush();
+            
+            BufferedReader stdIn =new BufferedReader(new InputStreamReader(client.getInputStream()));
+            String in = stdIn.readLine();
+            System.out.println("image_set set. "+in);
+            
     		Send send = new Send(socket,sock);
     		send.start();
 
 			
 //			oos.close();
 //			Thread.sleep(4000);
-//          ois.close();
+//    		ois.close();
 		
 //            socket.close();
 //            sock.close();
@@ -54,9 +58,7 @@ public class tranServer extends Thread {
             // TODO Auto-generated catch block
             e.printStackTrace();
 			
-        } catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+        }
 		
 	   }
 	}
@@ -93,7 +95,7 @@ class Send extends Thread
         ArrayList<byte[]> imgByte = new ArrayList<>();
         ArrayList<String> text = new ArrayList<>();
         int fileLen = files.length;
-	Path path = Paths.get("/home/root/coordi/after_recommend");
+        Path path = Paths.get("/home/root/coordi/after_recommend");
         try 
         {
 			for(int i=0; i<fileLen ; i++)
@@ -109,7 +111,7 @@ class Send extends Thread
 			Object obj = (Object)an;
 			ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
 			oos.writeObject(obj);
-
+			s.close();
 			Receive r = new Receive(serverSock);
 			r.start();
 //			oos.flush();
