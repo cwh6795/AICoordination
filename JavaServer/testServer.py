@@ -16,6 +16,8 @@ class Socket(threading.Thread):
             self.ServerSocket.listen()
             client, addr = self.ServerSocket.accept()
             print(addr, "accessed")
+            dir = client.recv(1024)
+            print("dir ->", dir.decode())
             time.sleep(6)
             exx = client.sendall("time done \n".encode())
             print("python sending done", exx)

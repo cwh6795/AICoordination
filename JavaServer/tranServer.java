@@ -10,68 +10,84 @@ import java.io.*;
 
 public class tranServer extends Thread {
 	public static ServerSocket sock;
-	public static Socket client;
+	public Socket android;
+	public static Socket python_client;
 	public static int count = 0;
-	public tranServer(ServerSocket s)
+	String dir_string;
+	private transform trans;
+	public tranServer(transform trans ,Socket android)
 	{
-		sock = s;
+		this.trans = trans;
+		this.android = android;
 	}
 	
     @Override
 	public void run() {
 		// TODO Auto-generated method stub
-      while(true){
+
         try {
-			System.out.println("waiting client");
-            Socket socket = sock.accept();
-			count++;
-			System.out.println("socket accepted, number of counts = "+count);			
-            ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-            transform trans = (transform)ois.readObject();
-            trans.BtoI();
-            
-            client = new Socket("localhost",8008);
-            PrintWriter out = new PrintWriter(client.getOutputStream(), true);
-            out.print("image stored\n");
-            out.flush();
-            
-            BufferedReader stdIn =new BufferedReader(new InputStreamReader(client.getInputStream()));
-            String in = stdIn.readLine();
-            System.out.println("image_set set. "+in);
-            
-    		Send send = new Send(socket,sock);
-    		send.start();
+
+	            dir_string = ""+android.getInetAddress()+":"+android.getPort();
+	            trans.setDir(dir_string);
+	            trans.BtoI();
+	            
+	            python_client = new Socket("localhost",8008);
+	            PrintWriter out = new PrintWriter(python_client.getOutputStream(), true);
+	            out.print("/home/root/coordi/testing/"+dir_string);
+	            out.flush();
+	            
+	            BufferedReader stdIn =new BufferedReader(new InputStreamReader(python_client.getInputStream()));
+	            String in = stdIn.readLine();
+	            System.out.println("image_set set. "+in);
+	            
+	    		Send send = new Send(android,sock);
+	    		send.start();
 
 			
 //			oos.close();
 //			Thread.sleep(4000);
 //    		ois.close();
 		
-//            socket.close();
-//            sock.close();
+//          socket.close();
+//          sock.close();
 
             
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-			
         }
 		
-	   }
+	   
 	}
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, ClassNotFoundException {
 	       	// TODO Auto-generated method stub
 		
         int port = 8080;
         
         sock = new ServerSocket(port);
-		tranServer start = new tranServer(sock);
-        start.start();
-        
+        while(true)
+        {
+        	System.out.println("waiting client");
+	        Socket client = sock.accept();
+			count++;
+			System.out.println("socket accepted ->,"+client+" number of counts = "+count);
+			System.out.println("address -> "+client.getInetAddress()+"\n"+"port-> "+client.getPort());
+            ObjectInputStream ois = new ObjectInputStream(client.getInputStream());
+            transform trans = (transform)ois.readObject();
+            if (trans.identifier == 0)
+            {
+    			tranServer start = new tranServer(trans, client);
+    	        start.start();
+            }
+            else if (trans.identifier == 1)
+            {
+            	String rating = trans.rate;
+    			Receive r = new Receive(rating);
+    			r.start();
+            }
+
+        }
         
     }
 
@@ -87,7 +103,8 @@ class Send extends Thread
 		serverSock = sock;
 	}
 	@Override
-	public void run() {
+	public void run() 
+	{
 	// TODO Auto-generated method stub
 		System.out.println("sending started");
         File[] files = new File("/home/root/coordi/recommend").listFiles();
@@ -112,8 +129,7 @@ class Send extends Thread
 			ObjectOutputStream oos = new ObjectOutputStream(s.getOutputStream());
 			oos.writeObject(obj);
 			s.close();
-			Receive r = new Receive(serverSock);
-			r.start();
+
 //			oos.flush();
 //			Thread.sleep(4000);
 //			oos.close();
@@ -134,35 +150,24 @@ class Send extends Thread
 class Receive extends Thread
 {
 	ServerSocket serverSock;
-	public Receive(ServerSocket s)
+	String rate;
+	public Receive(String rate)
 	{
-		serverSock = s;
+		this.rate = rate;
 	}
-	
-	Socket socket;
-
-	InputStream is;
-	InputStreamReader isr;
-	BufferedReader br;
 	File file;
 	FileWriter writer;
 	public void run()
 	{
-		try{
-		
-		socket = serverSock.accept();
-		is = socket.getInputStream();
-		isr = new InputStreamReader(is);
-		br = new BufferedReader(isr);
-		String data = br.readLine();
-		File file = new File("/home/root/coordi/rating/rating.txt");
-		writer = new FileWriter(file);
-		writer.write(data);
-		writer.flush();
-		writer.close();
-
-//		serverSock.close();
-		}catch(IOException e)
+		try
+		{
+			File file = new File("/home/root/coordi/rating/rating.txt");
+			writer = new FileWriter(file);
+			writer.write(rate);
+			writer.flush();
+			writer.close();
+		}
+		catch(IOException e)
 		{
 			e.printStackTrace();
 		}
