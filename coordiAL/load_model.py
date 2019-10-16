@@ -1,5 +1,7 @@
 from keras.models import model_from_json
 from PIL import Image
+import socket
+import time
 import shutil
 import os
 import sys
@@ -25,6 +27,38 @@ from keras import backend as K
 src_path = './testing'
 dest_path = './coordiend'
 img_res_path = './DIR'
+flag = 0
+dir_name = ""
+
+class Socket():
+	def __init__(self):
+		self.PORT = 8008
+		self.ServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.ServerSocket.bind(("", self.PORT))
+
+	def sock_start(self):
+		global dir_name, flag
+		print("waiting client")
+		self.ServerSocket.listen()
+		client, addr = self.ServerSocket.accept()
+		self.tmp_client = client
+		print(addr, "accessed")
+		dir = client.recv(1024)
+		print("dir ->", dir.decode())
+		dir_name = dir.decode()
+		flag = 1
+
+	def sock_end(self):
+		global flag
+		global send_str
+		exx = self.tmp_client.sendall((send_str + "\n").encode())
+		print("send_str -> ", send_str)
+		print("python sending done", exx)
+		flag = 0
+
+sock = Socket()
+
+		
 
 def getAttr(list):
 	sex = []
@@ -56,11 +90,19 @@ def getAttr_ver2(list):
 	return sex, age, style
 
 
+def loadMatrix2():
+	men_type_file_ = np.loadtxt('./csv/csv_data/men_type.csv', delimiter=',', dtype=np.int32)
+	men_texture_file_ = np.loadtxt('./csv/csv_data/men_texture.csv', delimiter=',', dtype=np.int32)
+	women_type_file_ = np.loadtxt('./csv/csv_data/women_type.csv', delimiter=',', dtype=np.int32)
+	women_texture_file_ = np.loadtxt('./csv/csv_data/women_texture.csv', delimiter=',', dtype=np.int32)
+
+	return [men_type_file_, men_texture_file_, women_type_file_, women_texture_file_]
+
 def loadMatrix():
-	men_type_file_ = np.loadtxt('./csv/data/men_type.csv', delimiter=',', dtype=np.int32)
-	men_texture_file_ = np.loadtxt('./csv/data/texture_regu.csv', delimiter=',', dtype=np.int32)
-	women_type_file_ = np.loadtxt('./csv/data/women_type.csv', delimiter=',', dtype=np.int32)
-	women_texture_file_ = np.loadtxt('./csv/data/texture_regu.csv', delimiter=',', dtype=np.int32)
+	men_type_file_ = np.loadtxt('./csv/men_type.csv', delimiter=',', dtype=np.float32)
+	men_texture_file_ = np.loadtxt('./csv/men_texture.csv', delimiter=',', dtype=np.float32)
+	women_type_file_ = np.loadtxt('./csv/women_type.csv', delimiter=',', dtype=np.float32)
+	women_texture_file_ = np.loadtxt('./csv/women_texture.csv', delimiter=',', dtype=np.float32)
 
 	return [men_type_file_, men_texture_file_, women_type_file_, women_texture_file_]
 
@@ -81,22 +123,22 @@ def top_type_mapping(typeind):
 
 
 def get_max_list(matrix, top_k):
-	max_list = []
-	index_list = []
+	max_list2 = []
+	index_list2 = []
 	max = 0
 	index = [0, 0]
 	for x in range(top_k):
 		for j in range(len(matrix)):
 			for k in range(len(matrix[0])):
-				if max < matrix[j][k] and ([j, k] not in index_list):
+				if max < matrix[j][k] and ([j, k] not in index_list2):
 					max = matrix[j][k]
 					index = [j, k]
-		max_list.append(max)
-		index_list.append(index)
+		max_list2.append(max)
+		index_list2.append(index)
 		max = 0
 		index = [0, 0]
 
-	return max_list, index_list
+	return max_list2, index_list2
 
 
 def get_rand_list(matrix, top_k):
@@ -108,18 +150,16 @@ def get_rand_list(matrix, top_k):
 		rand_col = random.randrange(0, len(matrix[0]))
 
 		if matrix[rand_row][rand_col] != 0:
-			max_list.append(999)
+			rand_list.append(999)
 			index_list.append([rand_row, rand_col])
 		else:
 			continue
 		i += 1
 
-	return max_list, index_list
+	return rand_list, index_list
 
 
 def predictStyle(img_name, model_style):
-	print('-----------------------------------------------------------------------------------------------------------')
-	print('img_name : ', img_name)
 	XX = np.zeros((1, 200, 200, 3), dtype=K.floatx())
 	KK = image.load_img(img_name, grayscale=False, target_size=(200, 200))
 	KK = image.img_to_array(KK)
@@ -127,10 +167,24 @@ def predictStyle(img_name, model_style):
 	style_ = model_style.predict(XX, batch_size=None, verbose=0, steps=None)
 
 	style_index = np.argmax(style_[0])
-	print('-----------------------------------------------------------------------------------------------------------')
 
 	return STYLE[style_index]
 
+def convert_sum10(tmp_list):
+	sum_val = sum(tmp_list)
+	new_list = list(tmp_list)
+	for i in range(len(new_list)):
+		new_list[i] = round((new_list[i] * 10) / sum_val)
+
+	return new_list
+
+def print_array(array):
+	for i in range(len(array)):
+		for j in range(len(array[i])):
+			print('%4d' % int(array[i][j]), end='')
+		print()
+
+# main start ===================================================
 
 texture_json = open('./models/texture/model_texture19.json', 'r')
 style_json = open('./models/style/model_style7.json', 'r')
@@ -172,11 +226,16 @@ model_bot.compile(optimizer=opt, loss={'img': 'categorical_crossentropy'}, metri
 men_type_file, men_texture_file, women_type_file, women_texture_file = loadMatrix()
 
 while True:
-	img_list = os.listdir(src_path)
-	if len(img_list) == 0:
+#	img_list = os.listdir(src_path)
+#	if len(img_list) == 0:
+#		time.sleep(1)
+#		continue
+	sock.sock_start()
+	if flag == 0:
 		time.sleep(1)
 		continue
-
+	
+	src_path = dir_name
 	target_list = os.listdir(src_path)
 	file_list = [target_list[0]]
 	# sex, style = getAttr(file_list)
@@ -204,7 +263,12 @@ while True:
 		print('----coordinate start-----')
 		two = np.argmax(tx)
 		thr = np.argmax(st)
-		print(to_bo_fu)
+		if to_bo_fu[0] > to_bo_fu[2]:
+			send_str = 'top'
+			print("BOT")
+		else:
+			send_str = 'bot'
+			print("TOP")
 		print('to : %s' % TYPE_TOP[np.argmax(to)])
 		print('bo : %s' % TYPE_BOT[np.argmax(bo)])
 		to_bo_fu_be = to_bo_fu
@@ -264,7 +328,7 @@ while True:
 		elif clo == 1:
 			last = np.transpose(axis_texture) + axis_type
 
-		#print(last)
+		#print_array(last)
 		'''
 		while True:
 			top_k = input('input top k : ')
@@ -274,8 +338,7 @@ while True:
 			else:
 				print('invalid value')
 		'''
-		top_k = 20
-
+		top_k = 5
 		max_list, index_list = get_max_list(last, top_k)
 		rand_list, rand_index = get_rand_list(last, top_k)
 		rec_list_val = []
@@ -313,59 +376,66 @@ while True:
 		for line in rec_list_val:
 			print(line)
 		print('-----/coordinate for top_k value/-----')
-		print('-----/coordinate for random value/-----')
-		for line in rec_list_rand:
-			print(line)
-		print('-----/coordinate for random value/-----')
 
 		rec_img_array = []
 		fin_img_list = []
+		# get img's list in img_res_path('DIR') from recommended attribute
 		for rec in rec_list_val:
+			# ./DIR/men/jean/abstract
 			path = os.path.join(os.path.join(os.path.join(img_res_path, sex[0]), rec[0]), rec[1])
 			tmp_img_list = os.listdir(path)
 			for i, k in enumerate(tmp_img_list):
+				# ./DIR/men/jan/abstract/img0001.jpg
 				tmp_string = os.path.join(path, k)
 				if style[0] == 'none':
 					tmp_img_list[i] = (tmp_string, 'none')
 				elif style[0] in STYLE:
 					tmp_style = predictStyle(tmp_string, model_style)
 					tmp_img_list[i] = (tmp_string, tmp_style)
+			# don't mind user's input(style)
 			rec_img_array.append(tmp_img_list)
 
-		print('rec_img_array : ', rec_img_array)
-		for img_array in rec_img_array:
+		rec_ratio = convert_sum10(max_list)
+
+		# rec_img_array list's element is list
+		# rec_img_array 의 요소인 각 리스트는 (추천할 이미지 경로+이름, 스타일로 지정되어 있다)
+		# ex) ('./DIR/women/Skirt/tonal/img_0000008.jpg', 'none')
+		rec_img_array = np.array(rec_img_array)
+		for i, img_array in enumerate(rec_img_array):
 			if len(img_array) != 0:
+				# 스타일로 필터링 하지 않을 때
 				if style[0] == 'none':
-					A = random.randrange(0, len(img_array))
-					fin_img_list.append(img_array[A][0])
+					if len(img_array) < rec_ratio[i]:
+							print('이미지의 수가 너무 적어요 보충해야합니다.')
+							rec_ratio[i] = len(img_array)
+
+					cho_index = np.random.choice(range(0, len(img_array)), int(rec_ratio[i]), replace=False)
+					if len(cho_index) != 0:
+						for q in cho_index:
+							fin_img_list.append(img_array[q][0])
+				# 스타일이 지정되어 그것으로 필터링 해야 할 때
 				elif style[0] in STYLE:
+					tmp_list = []
 					for X in range(len(img_array)):
 						if img_array[X][1] == style[0]:
-							fin_img_list.append(img_array[X][0])
+							tmp_list.append(img_array[X])
+
+					if len(tmp_list) < rec_ratio[i]:
+							print('이미지의 수가 너무 적어요 보충해야합니다.(style)')
+							rec_ratio[i] = len(tmp_list)
+
+					if len(tmp_list) != 0:
+						cho_index = np.random.choice(range(0, len(tmp_list)), int(rec_ratio[i]), replace=False)
+						for q in cho_index:
+							fin_img_list.append(tmp_list[q][0])
+
+
 
 		print('fin_img_list : ', fin_img_list)
-		for fin_img in fin_img_list:
-			shutil.copy2(fin_img, './recommend/' + fin_img.split('/')[3] + '_' + fin_img.split('/')[4] + '_' + style[0] + '.jpg')
-		'''
-		rec_img_array = []
-		fin_img_list = []
-		for rec in rec_list_val:
-			path = os.path.join(os.path.join(os.path.join(img_res_path, sex[0]), rec[0]), rec[1])
-			tmp_img_list = os.listdir(path)
-			for i, k in enumerate(tmp_img_list):
-				tmp_img_list[i] = os.path.join(path, k)
-			rec_img_array.append(tmp_img_list)
-
-		print('rec_img_array : ', rec_img_array)
-		for img_array in rec_img_array:
-			if len(img_array) != 0:
-				A = random.randrange(0, len(img_array))
-				fin_img_list.append(img_array[A])
-
-		print('fin_img_list : ', fin_img_list)
-		for fin_img in fin_img_list:
-			shutil.copy2(fin_img, './final/' + fin_img.split('/')[3] + '_' + fin_img.split('/')[4] + '.jpg')
-		'''
-
+		for i, fin_img in enumerate(fin_img_list):
+			shutil.copy2(fin_img, './recommend/' + fin_img.split('/')[3] + '_' + fin_img.split('/')[4] + '_' + style[0] + str(i) + '.jpg')
+	# move user's cloth picture
 	shutil.move(os.path.join(src_path, file_list[0]), os.path.join(dest_path, file_list[0]))
+	sock.sock_end()
 	time.sleep(1)
+
